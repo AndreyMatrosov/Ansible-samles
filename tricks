@@ -1,0 +1,14 @@
+check that the destination file exists or not and then make a decision based on the output of its result
+```
+tasks:
+- name: Check that the somefile.conf exists
+  stat:
+    path: /etc/file.txt
+  register: stat_result
+
+- name: Create the file, if it doesnt exist already
+  file:
+    path: /etc/file.txt
+    state: touch
+  when: not stat_result.stat.exists
+```
