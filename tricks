@@ -1,4 +1,4 @@
-check that the destination file exists or not and then make a decision based on the output of its result
+---check that the destination file exists or not and then make a decision based on the output of its result
 ```
 tasks:
 - name: Check that the somefile.conf exists
@@ -12,7 +12,7 @@ tasks:
     state: touch
   when: not stat_result.stat.exists
 ```
-create users
+---create users
 ```
 - hosts: "localhost"
   connection: "local"
@@ -38,3 +38,52 @@ create users
       state: "present"
       regexp: "^%admin"
       line: "%admin ALL=(ALL) NOPASSWD: ALL"
+```
+---Managing users accounts with Ansible
+```
+---
+- hosts: "localhost"
+  connection: "local"
+  vars:
+    users:
+    - username: "paul"
+      groups: "admin,www-data"
+    - username: "tanya"
+      groups: "www-data"
+    remove_users:
+    - "ruby"
+  handlers:
+  - name: "Restart sshd"
+    service:
+      name: "sshd"
+      state: "restarted"
+  tasks:
+  - name: "Create user accounts"
+    user:
+      name: "{{ item.username }}"
+      groups: "{{ item.groups }}"
+      state: "present"
+    with_items: "{{ users }}"
+  - name: "Remove old user accounts in remove_users"
+    user:
+      name: "{{ item }}"
+      state: "absent"
+    with_items: "{{ remove_users }}"
+  - name: "Add authorized keys"
+    authorized_key:
+      user: "{{ item.username }}"
+      key: "{{ lookup('file', 'files/'+ item.username + '.key.pub') }}"
+    with_items: "{{ users }}"
+  - name: "Allow admin users to sudo without a password"
+    lineinfile:
+      dest: "/etc/sudoers" # path: in version 2.3
+      state: "present"
+      regexp: "^%admin"
+      line: "%admin ALL=(ALL) NOPASSWD: ALL"
+  - name: "Disable root login via SSH"
+    lineinfile:
+      dest: "/etc/ssh/sshd_config"
+      regexp: "^PermitRootLogin"
+      line: "PermitRootLogin no"
+    notify: "Restart sshd"
+...
